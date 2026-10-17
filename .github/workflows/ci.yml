@@ -17,14 +17,22 @@ jobs:
           - { name: "macOS Clang",  os: macos-15,     cxx: clang++ }
           - { name: "Windows MSVC", os: windows-2022, cxx: "" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure
         shell: bash
         run: |
           if [ -n "${{ matrix.cxx }}" ]; then export CXX=${{ matrix.cxx }}; fi
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DEMBERKV_WERROR=ON
       - name: Build
-        run: cmake --build build --config Release --parallel
+        shell: bash
+        run: |
+          # Surface compiler errors as annotations so a failure is readable
+          # from the run summary without opening the full log.
+          set -o pipefail
+          cmake --build build --config Release --parallel 2>&1 | tee build.log || {
+            grep -E "error[: ]" build.log | head -25 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure --timeout 120
 
@@ -36,7 +44,7 @@ jobs:
       matrix:
         sanitizer: ["address,undefined", "thread"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DEMBERKV_BUILD_BENCH=OFF -DEMBERKV_SANITIZE=${{ matrix.sanitizer }}
       - name: Build
@@ -48,7 +56,7 @@ jobs:
     name: Linux poll() backend
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DEMBERKV_FORCE_POLL=ON -DEMBERKV_BUILD_BENCH=OFF
       - run: cmake --build build --parallel
       - run: ctest --test-dir build --output-on-failure

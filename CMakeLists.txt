@@ -18,6 +18,13 @@ set(EMBERKV_SANITIZE "" CACHE STRING "Sanitizers for GCC/Clang, e.g. address,und
 
 find_package(Threads REQUIRED)
 
+# Apple Clang before 17 (Xcode 16 and older) ships a libc++ that still keeps
+# std::jthread and std::stop_token behind -fexperimental-library.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 17)
+  add_compile_options(-fexperimental-library)
+  add_link_options(-fexperimental-library)
+endif()
+
 # ---------------------------------------------------------------- warnings
 add_library(emberkv_options INTERFACE)
 if(MSVC)

@@ -1,5 +1,7 @@
 # EmberKV
 
+[![CI](https://github.com/Khalid-tk/emberkv/actions/workflows/ci.yml/badge.svg)](https://github.com/Khalid-tk/emberkv/actions/workflows/ci.yml)
+
 A multi-threaded, Redis-compatible in-memory key-value server written in modern C++20.
 
 EmberKV speaks the Redis wire protocol (RESP2), so stock tools work against it unchanged:

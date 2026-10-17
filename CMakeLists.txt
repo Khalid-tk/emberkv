@@ -18,12 +18,27 @@ set(EMBERKV_SANITIZE "" CACHE STRING "Sanitizers for GCC/Clang, e.g. address,und
 
 find_package(Threads REQUIRED)
 
-# Apple Clang before 17 (Xcode 16 and older) ships a libc++ that still keeps
-# std::jthread and std::stop_token behind -fexperimental-library.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 17)
-  add_compile_options(-fexperimental-library)
-  add_link_options(-fexperimental-library)
+# Some libc++ versions (including Apple's) still keep std::jthread and
+# std::stop_token behind -fexperimental-library. Test rather than guess.
+include(CheckCXXSourceCompiles)
+set(CMAKE_REQUIRED_LIBRARIES Threads::Threads)
+set(_emberkv_jthread_probe "
+  #include <stop_token>
+  #include <thread>
+  int main() { std::jthread t([](std::stop_token) {}); }")
+check_cxx_source_compiles("${_emberkv_jthread_probe}" EMBERKV_HAS_JTHREAD)
+if(NOT EMBERKV_HAS_JTHREAD)
+  set(CMAKE_REQUIRED_FLAGS -fexperimental-library)
+  check_cxx_source_compiles("${_emberkv_jthread_probe}" EMBERKV_HAS_JTHREAD_EXPERIMENTAL)
+  unset(CMAKE_REQUIRED_FLAGS)
+  if(EMBERKV_HAS_JTHREAD_EXPERIMENTAL)
+    add_compile_options(-fexperimental-library)
+    add_link_options(-fexperimental-library)
+  else()
+    message(FATAL_ERROR "EmberKV needs std::jthread (GCC 13+, Clang 18+, or Visual Studio 2022)")
+  endif()
 endif()
+unset(CMAKE_REQUIRED_LIBRARIES)
 
 # ---------------------------------------------------------------- warnings
 add_library(emberkv_options INTERFACE)

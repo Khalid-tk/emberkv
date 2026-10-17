@@ -1,0 +1,10 @@
+build*/
+out/
+.vs/
+.vscode/
+.idea/
+cmake-build-*/
+CMakeUserPresets.json
+compile_commands.json
+*.ekv
+*.ekv.tmp
